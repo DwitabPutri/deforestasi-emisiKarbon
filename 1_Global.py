@@ -17,16 +17,38 @@ tree_loss_df = tree_loss_df[tree_loss_df["threshold"] == 30]
 primary_loss_df = primary_loss_df[primary_loss_df["threshold"] == 30]
 carbon_df = carbon_df[carbon_df["umd_tree_cover_density_2000__threshold"] == 30]
 
-# === Kolom Tahun ===
-tree_loss_cols = [col for col in tree_loss_df.columns if "tc_loss_ha_" in col]
-primary_loss_cols = [col for col in primary_loss_df.columns if "tc_loss_ha_" in col]
-available_years = sorted([int(col.split("_")[-1]) for col in primary_loss_cols])
+# === Tetapkan Batas Tahun Valid ===
+min_valid_year = 2002
+max_valid_year = 2024
+
+# === Kolom Tahun untuk Tree Loss dan Primary Loss ===
+tree_loss_cols = sorted(
+    [col for col in tree_loss_df.columns 
+     if "tc_loss_ha_" in col and min_valid_year <= int(col.split("_")[-1]) <= max_valid_year],
+    key=lambda x: int(x.split("_")[-1])
+)
+
+primary_loss_cols = sorted(
+    [col for col in primary_loss_df.columns 
+     if "tc_loss_ha_" in col and min_valid_year <= int(col.split("_")[-1]) <= max_valid_year],
+    key=lambda x: int(x.split("_")[-1])
+)
+
+# === Daftar Tahun yang Tersedia ===
+available_years = [int(col.split("_")[-1]) for col in primary_loss_cols]
 
 # === Sidebar Filter Tahun ===
 with st.sidebar:
     st.markdown("### Filter Tahun")
-    selected_years = st.slider("Rentang Tahun", min(available_years), max(available_years), (2002, 2024), step=1)
+    selected_years = st.slider(
+        "Rentang Tahun", 
+        min(available_years), 
+        max(available_years), 
+        (min_valid_year, max_valid_year), 
+        step=1
+    )
 
+# === Ambil Kolom Sesuai Tahun Terpilih ===
 year_cols_selected = [f"tc_loss_ha_{y}" for y in range(selected_years[0], selected_years[1] + 1)]
 
 # === KPI ===
@@ -39,11 +61,10 @@ net_flux = carbon_df["gfw_forest_carbon_net_flux__Mg_CO2e_yr-1"].sum() * (carbon
 
 # === KPI Cards ===
 st.markdown(f"#### Ringkasan Indikator Utama ({selected_years[0]}–{selected_years[1]})")
-k1, k2, k3, k4 = st.columns([1, 1, 1, 1.6])
+k1, k2, k3 = st.columns([1, 1, 1])
 k1.metric("Kehilangan Area Berpohon", f"{total_tree_loss:,.0f} ha")
 k2.metric("Kehilangan Hutan Primer", f"{total_primary_loss:,.0f} ha")
-k3.metric("Pertumbuhan Area Berpohon", f"{gain_total:,.0f} ha")
-k4.metric("Net Emisi Karbon", f"{net_flux:,.0f} t CO2e")
+k3.metric("Net Emisi Karbon", f"{net_flux:,.0f} t CO2e")
 
 st.markdown("---")
 
